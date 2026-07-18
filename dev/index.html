@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Module 3 | Visual Libraries | PixiJS</title>
+</head>
+<body>
+  <game id="game"></game>
+  <!-- Load in the PixiJS -->
+  <script src="https://pixijs.download/release/pixi.min.js"></script>
+  <!-- Our ES6 code goes here as a type="module" -->
+  <script type="module">
+// We first need to create a new PixiJS application instance
+const app = new PIXI.Application();
+// Now we need to call an asyncronous method on our PixiJS
+// application called "init" which initializes our display
+
+// Video: Define: Width, Height, and Background Color
+await app.init({
+  backgroundColor: "#3398b9",
+  width: 800,
+  height: 800
+});
+
+// Video: Define element to append our PixiJS canvas to
+document.getElementById('game').appendChild(app.canvas);
+
+/* =========================================================
+REQUIREMENT 1: Create four rectangles (lines), one for
+each border of the application. Each line occupies one
+side of a box and sits at the very edge of the screen.
+ ========================================================= */
+
+// Every border is 10px thick and hugs one edge of our
+// 800px by 800px stage
+
+//Video: Define the thickness of each border
+const BORDER_THICKNESS = 10
+
+/* =========================================================
+ REQUIREMENT 2: Each border starts as a different color
+ than the blue background — ours all begin as black
+ ========================================================= */
+
+// Video: Starting color for all four borders (black)
+const START_COLOR = "#000000"
+
+/* 
+=========================================================
+EXTRA REQUIREMENT (Border Color Change): this is the
+color a border switches to AFTER the circle bounces off
+of it, so the player can see it has already been hit 
+=========================================================
+*/
+
+//Video: Hit color for all four borders (pink)
+const HIT_COLOR = "#ff69b4"
+
+// This helper paints one border rectangle using the same
+// beginFill -> drawRect -> endFill pattern from the
+// "Working With a Visual Library" lesson. We reuse it when
+// we first draw the borders AND when we repaint one after
+// the circle bounces off of it
+
+// Video: Define a function to paint a border rectangle
+const paintBorder = (graphic, x, y, width, height, color) => {
+  // Wipe whatever was drawn before so we can recolor it
+  graphic.clear()
+  // Set the "fill" color for our rectangle
+  graphic.beginFill(color)
+  // Draw the actual rectangle: X, Y, width, and height,
+  // all measured in pixels on our coordinate grid
+  graphic.drawRect(x, y, width, height)
+  // End the "fill" we started with our "beginFill" call
+  graphic.endFill()
+}
+
+// Here we describe all four of our borders in one object.
+// Each entry holds its own Graphics instance, the rectangle
+// it occupies on the stage, and a "hit" flag
+
+/* =========================================================
+REQUIREMENT 3: the "hit" flag is how our application
+REMEMBERS which borders the circle has collided with 
+========================================================= */
+
+// Video: Define an object to hold all four borders
+const borders = {
+  top:    { graphic: new PIXI.Graphics(), x: 0,   y: 0,   width: 800, height: BORDER_THICKNESS, hit: false },
+  bottom: { graphic: new PIXI.Graphics(), x: 0,   y: 790, width: 800, height: BORDER_THICKNESS, hit: false },
+  left:   { graphic: new PIXI.Graphics(), x: 0,   y: 0,   width: BORDER_THICKNESS, height: 800, hit: false },
+  right:  { graphic: new PIXI.Graphics(), x: 790, y: 0,   width: BORDER_THICKNESS, height: 800, hit: false },
+}
+
+// Now draw each border in its starting black color and add
+// it to our game stage with the addChild call
+
+// Video: Paint each border and add it to the stage
+for (const border of Object.values(borders)) {
+  paintBorder(border.graphic, border.x, border.y, border.width, border.height, START_COLOR)
+  app.stage.addChild(border.graphic)
+}
+
+/* =========================================================
+REQUIREMENT 4: Use a Promise to end the game. Just like
+in the "Promise Chaining" lesson, we create a new
+instance of the Promise class and it hands us a
+"resolve" function. Our promise starts out in the
+"pending" state and stays pending while the circle is
+still bouncing around. We hold onto the resolve function
+so we can call it later — but ONLY once the circle has
+bounced off all four borders.
+========================================================= */
+
+let resolveGameOver
+
+// Video: Create a new Promise instance to end the game
+
+const gameOver = new Promise((resolve, reject) => {
+  // Remember: resolve() and the function passed into
+  // .then() are linked — calling resolve() later is what
+  // triggers our .then() below and moves the promise from
+  // "pending" to "fulfilled"
+  resolveGameOver = resolve
+})
+
+/* =========================================================
+REQUIREMENT 5: When the Promise resolves, the game ends
+and an alert notifies the user that the application has
+completed. We stop the ticker first (app.ticker.stop()
+halts our game loop, just like in the hit detection
+lesson) so we don't get stuck in an endless alert loop.
+ ========================================================= */
+
+// Video: Stop the ticker and alert the user when the game ends
+gameOver.then((message) => {
+  app.ticker.stop() // Halts our ticker
+  alert(message)
+})
+
+// This function runs every time the circle bounces off a
+// border. It remembers the collision, repaints that border,
+// and resolves our Promise once every border has been hit
+
+// Video: Define a function to register a border hit
+const registerHit = (name) => {
+  const border = borders[name]
+  // Only react the FIRST time this border is hit
+  if (border.hit) return
+  // REQUIREMENT 3 (continued): remember this collision
+  border.hit = true
+
+  /* ========================================================= 
+  EXTRA REQUIREMENT (Border Color Change): repaint the
+  border pink to show it has already been bounced off of 
+  ============================================================*/
+
+  // Video: Repaint the border pink to show it has been hit
+  paintBorder(border.graphic, border.x, border.y, border.width, border.height, HIT_COLOR)
+  /* =========================================================
+  REQUIREMENT 4 (continued): if every single border has
+   now been hit, resolve the Promise — which triggers the
+   .then() above and ends the game 
+   ============================================================*/
+
+  // Video: Resolve the Promise if all four borders have been hit
+  if (Object.values(borders).every((b) => b.hit)) {
+    resolveGameOver(`All four borders have been hit!`)
+  }
+}
+
+// First lets create ourselves a new graphic instance to
+// represent our "cirlce" on the screen and assign it to
+// a variable called "circle"
+
+// Video: Create a new graphic instance for our circle
+
+const circle = new PIXI.Graphics()
+// Now we can set it's "fill" color to a nice fun yellow!
+
+
+circle.beginFill("#f5ef42")
+// Now we need to tell Pixi to draw an actual circle
+// the three arguments we need are: X, Y, and radius size
+// all measured in pixels
+
+
+
+circle.drawCircle( 5, 5, 5 )
+// Now we need to call an end to our "fill" that we started
+// earlier with our "beginFill" call with the "endFill" call
+
+
+
+circle.endFill()
+// The circle is drawn 5px in from its own origin with a
+// 5px radius, so the whole graphic is 10px wide and tall
+
+// Video: Circle Size
+const CIRCLE_SIZE = 10
+// Now we need to tell our circle where to "spawn" on our
+// game display by setting it's "view" x and y coordinates
+
+// Video: Circle spawn coordinates
+circle.x = 450
+circle.y = 400
+// This will determine our circle's "velocity" and direction
+
+
+// Video: Circle velocity and direction
+let xv = 1
+let yv = 1
+
+// Now finally!!! Let's add our cirlce to our game stage
+// to see what happens using the addChild call
+
+//Video: Add the circle to the stage
+app.stage.addChild(circle)
+
+// The circle should bounce when it touches the INSIDE edge
+// of a border instead of the edge of the screen, so the
+// playable area runs from the border thickness up to 800px
+// minus the border thickness minus the circle's size
+
+// Video: Define the minimum and maximum edges for the circle
+const MIN_EDGE = BORDER_THICKNESS
+const MAX_EDGE = 800 - BORDER_THICKNESS - CIRCLE_SIZE
+
+// Now what we need to do is to add a refresh engine that
+// powers our graphic's movement. We can use Pixi's built
+// in "ticker" feature like so...
+
+// Video: Add a ticker to update the circle's position
+app.ticker.add(() => {
+  // All of the following code will be executed on every
+  // "frame" update/refresh
+
+  // Hit detection: if our circle touches the left or the
+  // right border...
+
+  // Video: Check for collision with left or right border
+  if (circle.x <= MIN_EDGE || circle.x >= MAX_EDGE) {
+    // ...remember WHICH border it just bounced off of
+
+    // Video: Register the border hit and flip the circle's X velocity
+    registerHit(circle.x <= MIN_EDGE ? 'left' : 'right')
+
+    xv = -xv
+  }
+
+
+  // Video: Check for collision with top or bottom border
+  if (circle.y <= MIN_EDGE || circle.y >= MAX_EDGE) {
+    registerHit(circle.y <= MIN_EDGE ? 'top' : 'bottom')
+    yv = -yv
+  }
+ 
+  // Video: Update the circle's position based on its direction and velocity
+  circle.x += xv
+  circle.y += yv
+})
+
+  </script>
+</body>
+</html>
